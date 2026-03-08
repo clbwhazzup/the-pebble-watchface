@@ -1,0 +1,17 @@
+# Build output directories
+build/
+bin/
+
+# Temporary files and build tools
+.waf-1*
+.lock-wscript
+.lock-waf_linux_build
+
+# User-specific keys/certificates
+*.pem
+*.pbl
+
+# IDE/Editor files
+.vscode/
+.idea/
+.DS_Store

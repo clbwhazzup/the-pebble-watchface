@@ -1,0 +1,84 @@
+{
+  "name": "the",
+  "author": "clbwhazzup",
+  "version": "1.0.0",
+  "keywords": [
+    "watchface"
+  ],
+  "private": true,
+  "dependencies": {
+    "@rebble/clay": "^1.0.8"
+  },
+  "pebble": {
+    "displayName": "the",
+    "uuid": "25be9fe3-ee36-4643-8ece-28a5190e74ba",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk",
+      "diorite",
+      "emery",
+      "flint",
+      "gabbro"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "capabilities": [
+      "configurable",
+      "health",
+      "location"
+    ],
+    "messageKeys": [
+      "REQUEST_WEATHER",
+      "TEMPERATURE",
+      "CONDITIONS",
+      "LOCATION",
+      "HIGH",
+      "LOW",
+      "SUNRISE",
+      "SUNSET",
+      "CITY",
+      "BackgroundColor",
+      "TextColor",
+      "TemperatureUnit",
+      "ShowDate"
+    ],
+    "resources": {
+      "media": [
+        {
+          "type": "font",
+          "name": "FONT_DSEG_42",
+          "file": "fonts/DSEG7ClassicMini-Bold.ttf",
+          "characterRegex": "[0-9:]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_DSEG_WEATHER_24",
+          "file": "fonts/DSEGWeather.ttf",
+          "characterRegex": "[0-9]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_DSEGFT_12",
+          "file": "fonts/DSEG14ClassicMini-Bold.ttf",
+          "characterRegex": "[0-9a-zA-Z/:°, ]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_DSEGFT_20",
+          "file": "fonts/DSEG14ClassicMini-Bold.ttf",
+          "characterRegex": "[0-9a-zA-Z/:°, ]"
+        },
+        {
+          "type": "font",
+          "name": "FONT_DSEGFT_24",
+          "file": "fonts/DSEG14ClassicMini-Bold.ttf",
+          "characterRegex": "[0-9a-zA-Z/:°, ]"
+        }
+      ]
+    }
+  }
+}
