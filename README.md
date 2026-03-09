@@ -5,6 +5,7 @@
 #### My perfect collection of watchface features
 * Features
   * Weather temperature, high/low, humidity, and condtions icon
+  * Steps and heart rate
   * Day of week, month, day
   * Battery level bar with percent
   * Configurable seconds
@@ -13,7 +14,6 @@
     * DSEG7 Classic Mini Bold
     * DSEG14 Classic Mini Bold
     * DSEG Weather
-  * 
 #
 #
 #
@@ -28,3 +28,4 @@
   * Add humidity / chance of rain
     * Probably next to weather icon
   * Possibly different weather icons
+  * Steps and heart rate

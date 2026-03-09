@@ -35,6 +35,7 @@
       "REQUEST_WEATHER",
       "TEMPERATURE",
       "CONDITIONS",
+      "HUMIDITY",
       "LOCATION",
       "HIGH",
       "LOW",
@@ -66,19 +67,19 @@
           "type": "font",
           "name": "FONT_DSEGFT_12",
           "file": "fonts/DSEG14ClassicMini-Bold.ttf",
-          "characterRegex": "[0-9a-zA-Z/:°, -]"
+          "characterRegex": "[0-9a-zA-Z/:°,% -]"
         },
         {
           "type": "font",
           "name": "FONT_DSEGFT_20",
           "file": "fonts/DSEG14ClassicMini-Bold.ttf",
-          "characterRegex": "[0-9a-zA-Z/:°, -]"
+          "characterRegex": "[0-9a-zA-Z/:°,% -]"
         },
         {
           "type": "font",
           "name": "FONT_DSEGFT_24",
           "file": "fonts/DSEG14ClassicMini-Bold.ttf",
-          "characterRegex": "[0-9a-zA-Z/:°, -]"
+          "characterRegex": "[0-9a-zA-Z/:°,% -]"
         }
       ]
     }

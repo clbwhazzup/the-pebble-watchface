@@ -44,7 +44,7 @@ function locationSuccess(pos) {
   var url = 'https://api.open-meteo.com/v1/forecast?' +
       'latitude=' + pos.coords.latitude +
       '&longitude=' + pos.coords.longitude +
-      '&current=temperature_2m,weather_code' +
+      '&current=temperature_2m,relative_humidity_2m,weather_code' +
       '&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset' +
       '&timezone=auto';
 
@@ -54,6 +54,7 @@ function locationSuccess(pos) {
 
       var temperature = Math.round(json.current.temperature_2m);
       var conditions = weatherCodeToCondition(json.current.weather_code);
+      var humidity = Math.round(json.current.relative_humidity_2m);
       var high = Math.round(json.daily.temperature_2m_max[0]);
       var low = Math.round(json.daily.temperature_2m_min[0]);
       var sunrise = json.daily.sunrise[0];
@@ -67,6 +68,7 @@ function locationSuccess(pos) {
         var dictionary = {
           'TEMPERATURE': temperature,
           'CONDITIONS': conditions,
+          'HUMIDITY': humidity,
           'HIGH': high,
           'LOW': low,
           'SUNRISE': sunrise,

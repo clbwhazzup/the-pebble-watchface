@@ -20,10 +20,13 @@ static TextLayer* s_time_layer;
 static TextLayer* s_seconds_layer;
 static TextLayer* s_weather_layer;
 static TextLayer* s_conditions_layer;
+static TextLayer* s_humid_layer;
 static TextLayer* s_date_layer;
 static TextLayer* s_hl_layer;
 static TextLayer* s_rise_set_layer;
 static TextLayer* s_city_layer;
+static TextLayer* s_steps_layer;
+static TextLayer* s_hr_layer;
 static Layer* s_battery_layer;
 
 static GFont s_font_time;
@@ -34,15 +37,21 @@ static GFont s_font_weather;
 static GRect bounds;
 static AppTimer *s_seconds_timer;
 
+static char steps_buffer[16] = "------";
+static char hr_buffer[16] = "---";
+
 int seconds_choice;
 int time_y;
 int date_y;
 int hl_y;
 int weather_y;
 int condition_y;
+int humid_y;
 int rise_set_y;
 int city_y;
+int health_y;
 bool show_seconds_now;
+bool health_available;
 int battery_level;
 
 
@@ -93,14 +102,17 @@ static void prv_update_display() {
 static void set_positions(void) {
   bounds = layer_get_bounds(window_layer);
   int time_height = 42;
-  int date_height = 20;
-  time_y = (bounds.size.h / 2) - 35;
+  int medium_height = 20;
+  int small_height = 12;
+  time_y = (bounds.size.h / 2) - 40;
   hl_y = 24;
   weather_y = 15;
   condition_y = -5;
-  rise_set_y = bounds.size.h - 14;
-  date_y = rise_set_y - date_height - 5;
-  city_y = date_y - date_height - 5;
+  rise_set_y = bounds.size.h - small_height - 2;
+  date_y = rise_set_y - medium_height - 5;
+  city_y = time_y + time_height + 8;
+  health_y = city_y + small_height + 5;
+  humid_y = condition_y + small_height / 2 + 5;
 }
 
 
@@ -108,7 +120,7 @@ static void set_positions(void) {
 static void create_city_layer(void) {
   s_city_layer = text_layer_create(
       GRect(0, city_y, bounds.size.w, 30));
-  text_layer_set_font(s_city_layer, s_font_medium);
+  text_layer_set_font(s_city_layer, s_font_small);
   text_layer_set_text_color(s_city_layer, settings.TextColor);
   text_layer_set_background_color(s_city_layer, GColorClear);
   text_layer_set_text_alignment(s_city_layer, GTextAlignmentLeft);
@@ -130,7 +142,7 @@ static void create_weather_layer(void) {
 }
 static void create_conditons_layer(void){
   s_conditions_layer = text_layer_create(
-    GRect(-24, condition_y, bounds.size.w, 30));
+    GRect(-45, condition_y, bounds.size.w, 30));
     text_layer_set_font(s_conditions_layer, s_font_weather);
     text_layer_set_text_color(s_conditions_layer, settings.TextColor);
     text_layer_set_background_color(s_conditions_layer, GColorClear);
@@ -147,6 +159,60 @@ static void create_hl_layer(void) {
   text_layer_set_text_alignment(s_hl_layer, GTextAlignmentRight);
   text_layer_set_text(s_hl_layer, "---");
   layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_hl_layer));
+}
+static void create_humid_layer(void) {
+  s_humid_layer = text_layer_create(
+      GRect(0, humid_y, bounds.size.w, 30));
+  text_layer_set_font(s_humid_layer, s_font_small);
+  text_layer_set_text_color(s_humid_layer, settings.TextColor);
+  text_layer_set_background_color(s_humid_layer, GColorClear);
+  text_layer_set_text_alignment(s_humid_layer, GTextAlignmentRight);
+  text_layer_set_text(s_humid_layer, "---");
+  layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_humid_layer));
+}
+
+
+// Health handling
+static void health_handler(HealthEventType event, void *context) {
+  HealthMetric metric = HealthMetricStepCount;
+  HealthServiceAccessibilityMask mask;
+  bool any_data_available;
+  time_t start = time_start_of_today();
+  time_t end = time(NULL);
+  if (event == HealthEventSignificantUpdate || event == HealthEventMovementUpdate || event == HealthEventHeartRateUpdate) {
+    mask = health_service_metric_accessible(metric, start, end);
+    any_data_available = mask & HealthServiceAccessibilityMaskAvailable;
+    if (any_data_available) {
+      APP_LOG(APP_LOG_LEVEL_INFO, "data available");
+      HealthValue steps = health_service_sum_today(HealthMetricStepCount);
+      HealthValue hr = health_service_sum_today(HealthMetricHeartRateBPM);
+      APP_LOG(APP_LOG_LEVEL_INFO, "Steps: %d, HR: %d", (int)steps, (int)hr);
+      snprintf(steps_buffer, sizeof(steps_buffer), "%d", (int)steps);
+      snprintf(hr_buffer, sizeof(hr_buffer), "%d", (int)hr);
+      text_layer_set_text(s_steps_layer, steps_buffer);
+      text_layer_set_text(s_hr_layer, hr_buffer);
+    }
+  }
+}
+static void create_steps_layer(void) {
+  s_steps_layer = text_layer_create(
+      GRect(0, health_y, bounds.size.w, 30));
+  text_layer_set_font(s_steps_layer, s_font_small);
+  text_layer_set_text_color(s_steps_layer, settings.TextColor);
+  text_layer_set_background_color(s_steps_layer, GColorClear);
+  text_layer_set_text_alignment(s_steps_layer, GTextAlignmentLeft);
+  text_layer_set_text(s_steps_layer, "------");
+  layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_steps_layer));
+}
+static void create_hr_layer(void) {
+  s_hr_layer = text_layer_create(
+      GRect(0, health_y, bounds.size.w, 30));
+  text_layer_set_font(s_hr_layer, s_font_small);
+  text_layer_set_text_color(s_hr_layer, settings.TextColor);
+  text_layer_set_background_color(s_hr_layer, GColorClear);
+  text_layer_set_text_alignment(s_hr_layer, GTextAlignmentRight);
+  text_layer_set_text(s_hr_layer, "---");
+  layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_hr_layer));
 }
 
 
@@ -211,7 +277,7 @@ static void create_time_layer(void) {
 static void create_seconds_layer(void) {
   s_seconds_layer = text_layer_create(
       GRect(0, city_y, bounds.size.w, 30));
-  text_layer_set_font(s_seconds_layer, s_font_medium);
+  text_layer_set_font(s_seconds_layer, s_font_small);
   text_layer_set_text_color(s_seconds_layer, settings.TextColor);
   text_layer_set_background_color(s_seconds_layer, GColorClear);
   text_layer_set_text_alignment(s_seconds_layer, GTextAlignmentRight);
@@ -247,6 +313,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   }
   if (tick_time->tm_sec == 0) {
     update_time();
+    
   }
   if (tick_time->tm_min % 30 == 0 && tick_time->tm_sec == 0) {
     DictionaryIterator *iter;
@@ -294,8 +361,11 @@ static void main_window_load(Window* window) {
   create_rise_set_layer();
   create_weather_layer();
   create_conditons_layer();
+  create_humid_layer();
   create_city_layer();
   create_battery_layer();
+  create_steps_layer();
+  create_hr_layer();
   update_time();
   prv_update_display();
 }
@@ -304,10 +374,13 @@ static void main_window_unload(Window* window) {
   text_layer_destroy(s_seconds_layer);
   text_layer_destroy(s_weather_layer);
   text_layer_destroy(s_conditions_layer);
+  text_layer_destroy(s_humid_layer);
   text_layer_destroy(s_date_layer);
   text_layer_destroy(s_hl_layer);
   text_layer_destroy(s_rise_set_layer);
   text_layer_destroy(s_city_layer);
+  text_layer_destroy(s_steps_layer);
+  text_layer_destroy(s_hr_layer);
   layer_destroy(s_battery_layer);
   fonts_unload_custom_font(s_font_medium);
   fonts_unload_custom_font(s_font_small);
@@ -330,6 +403,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   // Weather and related data
   Tuple *temp_tuple = dict_find(iterator, MESSAGE_KEY_TEMPERATURE);
   Tuple *conditions_tuple = dict_find(iterator, MESSAGE_KEY_CONDITIONS);
+  Tuple *humid_tuple = dict_find(iterator, MESSAGE_KEY_HUMIDITY);
   Tuple *high_tuple = dict_find(iterator, MESSAGE_KEY_HIGH);
   Tuple *low_tuple = dict_find(iterator, MESSAGE_KEY_LOW);
   Tuple *sunrise_tuple = dict_find(iterator, MESSAGE_KEY_SUNRISE);
@@ -337,16 +411,18 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   Tuple *city_tuple = dict_find(iterator, MESSAGE_KEY_CITY);
   static char weather_layer_buffer[16];
   static char condition_layer_buffer[8];
+  static char humid_layer_buffer[8];
   static char hl_layer_buffer[16];
   static char rise_set_layer_buffer[48];
-  static char city_layer_buffer[32];
+  static char city_layer_buffer[12];
  
   if (temp_tuple && conditions_tuple) {
     static char temperature_buffer[16];
     static char conditions_buffer[8];
+    static char humid_buffer[8];
     static char hl_buffer[16];
     static char rise_set_buffer[48];
-    static char city_buffer[32];
+    static char city_buffer[12];
     int temp_value = temp_tuple->value->int32;
     int high_value = high_tuple ? high_tuple->value->int32 : 0;
     int low_value = low_tuple ? low_tuple->value->int32 : 0;
@@ -363,12 +439,15 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
       snprintf(temperature_buffer, sizeof(temperature_buffer), "%d°C", temp_value);
     }
     snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%s", temperature_buffer);
-
-    snprintf(hl_buffer, sizeof(hl_buffer), "%d°/%d°", high_value, low_value);
-    snprintf(hl_layer_buffer, sizeof(hl_layer_buffer), "%s", hl_buffer);
     
     snprintf(conditions_buffer, sizeof(conditions_buffer), "%s", conditions_tuple->value->cstring);
     snprintf(condition_layer_buffer, sizeof(condition_layer_buffer), "%s", conditions_buffer);
+
+    snprintf(humid_buffer, sizeof(humid_buffer), "%d%%", (int)humid_tuple->value->int32);
+    snprintf(humid_layer_buffer, sizeof(humid_layer_buffer), "%s", humid_buffer);
+
+    snprintf(hl_buffer, sizeof(hl_buffer), "%d°/%d°", high_value, low_value);
+    snprintf(hl_layer_buffer, sizeof(hl_layer_buffer), "%s", hl_buffer);
 
     snprintf(rise_set_buffer, sizeof(rise_set_buffer), "%s                        %s", sunrise_str, sunset_str);
     snprintf(rise_set_layer_buffer, sizeof(rise_set_layer_buffer), "%s", rise_set_buffer);
@@ -379,8 +458,9 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     }
 
     text_layer_set_text(s_weather_layer, weather_layer_buffer);
-    text_layer_set_text(s_hl_layer, hl_layer_buffer);
     text_layer_set_text(s_conditions_layer, condition_layer_buffer);
+    text_layer_set_text(s_humid_layer, humid_layer_buffer);
+    text_layer_set_text(s_hl_layer, hl_layer_buffer);
     text_layer_set_text(s_rise_set_layer, rise_set_layer_buffer);
   }
   // Check for Clay settings
@@ -440,6 +520,13 @@ static void init(void) {
   accel_tap_service_subscribe(tap_handler);
   battery_state_service_subscribe(battery_callback);
   battery_callback(battery_state_service_peek());
+  if(!health_service_events_subscribe(health_handler, NULL)) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Health not available!");
+    health_available = false;
+  } else{
+    APP_LOG(APP_LOG_LEVEL_INFO, "Health available!");
+    health_available = true;
+  }
   // Register AppMessage callbacks
   app_message_register_inbox_received(inbox_received_callback);
   app_message_register_inbox_dropped(inbox_dropped_callback);
