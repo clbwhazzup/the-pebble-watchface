@@ -7,6 +7,8 @@ typedef struct ClaySettings {
   GColor TextColor;
   bool TemperatureUnit; // false = Celsius, true = Fahrenheit
   bool ShowDate;
+  char SecondsChoice[10]; // "hide", "tap", "show"
+  int SecondsLimit; // 0-60
 } ClaySettings;
 static ClaySettings settings;
 
@@ -15,20 +17,24 @@ static ClaySettings settings;
 static Window* s_window;
 Layer* window_layer;
 static TextLayer* s_time_layer;
+static TextLayer* s_seconds_layer;
 static TextLayer* s_weather_layer;
 static TextLayer* s_conditions_layer;
 static TextLayer* s_date_layer;
 static TextLayer* s_hl_layer;
 static TextLayer* s_rise_set_layer;
 static TextLayer* s_city_layer;
+static Layer* s_battery_layer;
 
-// fonts used throughout the app
 static GFont s_font_time;
 static GFont s_font_medium;
 static GFont s_font_small;
 static GFont s_font_weather;
 
 static GRect bounds;
+static AppTimer *s_seconds_timer;
+
+int seconds_choice;
 int time_y;
 int date_y;
 int hl_y;
@@ -36,6 +42,8 @@ int weather_y;
 int condition_y;
 int rise_set_y;
 int city_y;
+bool show_seconds_now;
+int battery_level;
 
 
 // Settings handling
@@ -44,6 +52,8 @@ static void prv_default_settings() {
   settings.TextColor = GColorWhite;
   settings.TemperatureUnit = false;
   settings.ShowDate = true;
+  strcpy(settings.SecondsChoice, "show");
+  settings.SecondsLimit = 5000;
 }
 static void prv_save_settings() {
   persist_write_data(SETTINGS_KEY, &settings, sizeof(settings));
@@ -54,14 +64,28 @@ static void prv_load_settings() {
 }
 static void prv_update_display() {
   window_set_background_color(s_window, settings.BackgroundColor);
-
   text_layer_set_text_color(s_time_layer, settings.TextColor);
   text_layer_set_text_color(s_date_layer, settings.TextColor);
   text_layer_set_text_color(s_weather_layer, settings.TextColor);
+  text_layer_set_text_color(s_seconds_layer, settings.TextColor);
+  text_layer_set_text_color(s_conditions_layer, settings.TextColor);
+  text_layer_set_text_color(s_hl_layer, settings.TextColor);
+  text_layer_set_text_color(s_rise_set_layer, settings.TextColor);
+  text_layer_set_text_color(s_city_layer, settings.TextColor);
 
   layer_set_hidden(text_layer_get_layer(s_date_layer), !settings.ShowDate);
-
-  //layer_mark_dirty(s_battery_layer);
+  if (strncmp(settings.SecondsChoice, "hide", 4) == 0) {
+    show_seconds_now = false;
+    layer_set_hidden(text_layer_get_layer(s_seconds_layer), true);
+  } else if (strncmp(settings.SecondsChoice, "tap", 3) == 0) {
+    show_seconds_now = false;
+    layer_set_hidden(text_layer_get_layer(s_seconds_layer), false);
+    text_layer_set_text(s_seconds_layer, "--");
+  } else if (strncmp(settings.SecondsChoice, "show", 4) == 0) {
+    show_seconds_now = true;
+    layer_set_hidden(text_layer_get_layer(s_seconds_layer), false);
+  }
+  layer_mark_dirty(s_battery_layer);
 }
 
 
@@ -126,6 +150,43 @@ static void create_hl_layer(void) {
 }
 
 
+// Battery handling
+static void battery_callback(BatteryChargeState state) {
+  battery_level = state.charge_percent;
+  layer_mark_dirty(s_battery_layer);
+}
+static void battery_update_proc(Layer *layer, GContext *ctx) {
+  GRect bounds = layer_get_bounds(layer);
+  // Find the width of the bar (inside the border)
+  int bar_width = ((battery_level * (bounds.size.w - 4)) / 100);
+  // Draw the border
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_draw_round_rect(ctx, bounds, 2);
+  // Choose color based on battery level
+  GColor bar_color;
+  if (battery_level <= 20) {
+    bar_color = PBL_IF_COLOR_ELSE(GColorRed, GColorWhite);
+  } else if (battery_level <= 40) {
+    bar_color = PBL_IF_COLOR_ELSE(GColorChromeYellow, GColorWhite);
+  } else {
+    bar_color = PBL_IF_COLOR_ELSE(GColorGreen, GColorWhite);
+  }
+  // Draw the filled bar inside the border
+  graphics_context_set_fill_color(ctx, bar_color);
+  graphics_fill_rect(ctx, GRect(2, 2, bar_width, bounds.size.h - 4), 1, GCornerNone);
+}
+static void create_battery_layer(void) {
+  int bar_width = bounds.size.w / 3;
+  int bar_height = 12;
+  int bar_x = ((bounds.size.w - bar_width) / 2);
+  int bar_y = bounds.size.h - bar_height - 2;
+  s_battery_layer = layer_create(
+    GRect(bar_x, bar_y, bar_width, bar_height));
+  layer_set_update_proc(s_battery_layer, battery_update_proc);
+  layer_add_child(window_get_root_layer(s_window), s_battery_layer);
+}
+
+
 // Time handling
 static void create_date_layer(void) {
   s_date_layer = text_layer_create(
@@ -134,7 +195,7 @@ static void create_date_layer(void) {
   text_layer_set_text_color(s_date_layer, settings.TextColor);
   text_layer_set_background_color(s_date_layer, GColorClear);
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
-  text_layer_set_text(s_date_layer, "--- --");
+  text_layer_set_text(s_date_layer, "--- -- --");
   layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_date_layer));
 }
 static void create_time_layer(void) {
@@ -146,6 +207,16 @@ static void create_time_layer(void) {
   text_layer_set_text_alignment(s_time_layer, GTextAlignmentCenter);
   text_layer_set_text(s_time_layer, "--:--");
   layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_time_layer));
+}
+static void create_seconds_layer(void) {
+  s_seconds_layer = text_layer_create(
+      GRect(0, city_y, bounds.size.w, 30));
+  text_layer_set_font(s_seconds_layer, s_font_medium);
+  text_layer_set_text_color(s_seconds_layer, settings.TextColor);
+  text_layer_set_background_color(s_seconds_layer, GColorClear);
+  text_layer_set_text_alignment(s_seconds_layer, GTextAlignmentRight);
+  text_layer_set_text(s_seconds_layer, "--");
+  layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_seconds_layer));
 }
 static void create_rise_set_layer(void) {
   s_rise_set_layer = text_layer_create(
@@ -169,13 +240,39 @@ static void update_time() {
   text_layer_set_text(s_date_layer, s_date_buffer);
 }
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
-  update_time();
-  if (tick_time->tm_min % 30 == 0) {
+  if (show_seconds_now) {
+    static char s_seconds_buffer[4];
+    strftime(s_seconds_buffer, sizeof(s_seconds_buffer), "%S", tick_time);
+    text_layer_set_text(s_seconds_layer, s_seconds_buffer);
+  }
+  if (tick_time->tm_sec == 0) {
+    update_time();
+  }
+  if (tick_time->tm_min % 30 == 0 && tick_time->tm_sec == 0) {
     DictionaryIterator *iter;
     app_message_outbox_begin(&iter);
     dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
     app_message_outbox_send();
   }
+}
+static void hide_seconds_callback(void *data) {
+  show_seconds_now = false;
+  text_layer_set_text(s_seconds_layer, "--");
+}
+static void tap_handler(AccelAxisType axis, int32_t direction) {
+  if (strncmp(settings.SecondsChoice, "tap", 3) != 0) return;
+  show_seconds_now = true;
+  layer_set_hidden(text_layer_get_layer(s_seconds_layer), false);
+  time_t now = time(NULL);
+  struct tm *t = localtime(&now);
+  static char buf[4];
+  strftime(buf, sizeof(buf), "%S", t);
+  text_layer_set_text(s_seconds_layer, buf);
+
+  if (s_seconds_timer) {
+    app_timer_cancel(s_seconds_timer);
+  }
+  s_seconds_timer = app_timer_register(settings.SecondsLimit * 1000, hide_seconds_callback, NULL);
 }
 
 
@@ -191,25 +288,27 @@ static void main_window_load(Window* window) {
   bounds = layer_get_bounds(window_layer);
   set_positions();
   create_time_layer();
+  create_seconds_layer();
   create_date_layer();
   create_hl_layer();
   create_rise_set_layer();
   create_weather_layer();
   create_conditons_layer();
   create_city_layer();
+  create_battery_layer();
   update_time();
-  
+  prv_update_display();
 }
 static void main_window_unload(Window* window) {
   text_layer_destroy(s_time_layer);
+  text_layer_destroy(s_seconds_layer);
   text_layer_destroy(s_weather_layer);
   text_layer_destroy(s_conditions_layer);
   text_layer_destroy(s_date_layer);
   text_layer_destroy(s_hl_layer);
   text_layer_destroy(s_rise_set_layer);
   text_layer_destroy(s_city_layer);
-
-  // unload fonts
+  layer_destroy(s_battery_layer);
   fonts_unload_custom_font(s_font_medium);
   fonts_unload_custom_font(s_font_small);
   fonts_unload_custom_font(s_font_time);
@@ -301,8 +400,16 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   if (show_date_t) {
     settings.ShowDate = show_date_t->value->int32 == 1;
   }
+  Tuple *seconds_choice_t = dict_find(iterator, MESSAGE_KEY_SecondsChoice);
+  if (seconds_choice_t) {
+    strcpy(settings.SecondsChoice, seconds_choice_t->value->cstring);
+  }
+  Tuple *seconds_limit_t = dict_find(iterator, MESSAGE_KEY_SecondsLimit);
+  if (seconds_limit_t) {
+    settings.SecondsLimit = (int)seconds_limit_t->value->int32;
+  }
   // Save and apply if any settings were changed
-  if (bg_color_t || text_color_t || temp_unit_t || show_date_t) {
+  if (bg_color_t || text_color_t || temp_unit_t || show_date_t || seconds_choice_t || seconds_limit_t) {
     prv_save_settings();
     prv_update_display();
     // Refetch weather if the temperature unit changed so the display updates
@@ -330,6 +437,9 @@ static void init(void) {
   prv_load_settings();
   create_main_window();
   tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
+  accel_tap_service_subscribe(tap_handler);
+  battery_state_service_subscribe(battery_callback);
+  battery_callback(battery_state_service_peek());
   // Register AppMessage callbacks
   app_message_register_inbox_received(inbox_received_callback);
   app_message_register_inbox_dropped(inbox_dropped_callback);
@@ -338,9 +448,10 @@ static void init(void) {
   const int inbox_size = 256;
   const int outbox_size = 256;
   app_message_open(inbox_size, outbox_size);
-  //update_time();
 }
 static void deinit(void) {
+    accel_tap_service_unsubscribe();
+    if (s_seconds_timer) app_timer_cancel(s_seconds_timer);
   window_destroy(s_window);
 }
 int main(void) {

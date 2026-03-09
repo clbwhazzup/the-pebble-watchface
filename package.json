@@ -44,15 +44,17 @@
       "BackgroundColor",
       "TextColor",
       "TemperatureUnit",
-      "ShowDate"
+      "ShowDate",
+      "SecondsChoice",
+      "SecondsLimit"
     ],
     "resources": {
       "media": [
         {
           "type": "font",
           "name": "FONT_DSEG_42",
-          "file": "fonts/DSEG7ClassicMini-Bold.ttf",
-          "characterRegex": "[0-9:]"
+          "file": "fonts/DSEG14ClassicMini-Bold.ttf",
+          "characterRegex": "[0-9:-]"
         },
         {
           "type": "font",
@@ -64,19 +66,19 @@
           "type": "font",
           "name": "FONT_DSEGFT_12",
           "file": "fonts/DSEG14ClassicMini-Bold.ttf",
-          "characterRegex": "[0-9a-zA-Z/:°, ]"
+          "characterRegex": "[0-9a-zA-Z/:°, -]"
         },
         {
           "type": "font",
           "name": "FONT_DSEGFT_20",
           "file": "fonts/DSEG14ClassicMini-Bold.ttf",
-          "characterRegex": "[0-9a-zA-Z/:°, ]"
+          "characterRegex": "[0-9a-zA-Z/:°, -]"
         },
         {
           "type": "font",
           "name": "FONT_DSEGFT_24",
           "file": "fonts/DSEG14ClassicMini-Bold.ttf",
-          "characterRegex": "[0-9a-zA-Z/:°, ]"
+          "characterRegex": "[0-9a-zA-Z/:°, -]"
         }
       ]
     }
