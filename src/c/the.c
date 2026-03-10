@@ -7,6 +7,7 @@ typedef struct ClaySettings {
   GColor TextColor;
   bool TemperatureUnit; // false = Celsius, true = Fahrenheit
   bool ShowDate;
+  bool ShowCity;
   char SecondsChoice[10]; // "hide", "tap", "show"
   int SecondsLimit; // 0-60
 } ClaySettings;
@@ -61,6 +62,7 @@ static void prv_default_settings() {
   settings.TextColor = GColorWhite;
   settings.TemperatureUnit = false;
   settings.ShowDate = true;
+  settings.ShowCity = true;
   strcpy(settings.SecondsChoice, "show");
   settings.SecondsLimit = 5000;
 }
@@ -83,6 +85,7 @@ static void prv_update_display() {
   text_layer_set_text_color(s_city_layer, settings.TextColor);
 
   layer_set_hidden(text_layer_get_layer(s_date_layer), !settings.ShowDate);
+  layer_set_hidden(text_layer_get_layer(s_city_layer), !settings.ShowCity);
   if (strncmp(settings.SecondsChoice, "hide", 4) == 0) {
     show_seconds_now = false;
     layer_set_hidden(text_layer_get_layer(s_seconds_layer), true);
@@ -106,7 +109,7 @@ static void set_positions(void) {
   int small_height = 12;
   time_y = (bounds.size.h / 2) - 40;
   hl_y = 24;
-  weather_y = 15;
+  weather_y = 10;
   condition_y = -5;
   rise_set_y = bounds.size.h - small_height - 2;
   date_y = rise_set_y - medium_height - 5;
@@ -434,10 +437,8 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
       temp_value = (temp_value * 9 / 5) + 32;
       high_value = (high_value * 9 / 5) + 32;
       low_value = (low_value * 9 / 5) + 32;
-      snprintf(temperature_buffer, sizeof(temperature_buffer), "%d°F", temp_value);
-    } else {
-      snprintf(temperature_buffer, sizeof(temperature_buffer), "%d°C", temp_value);
     }
+    snprintf(temperature_buffer, sizeof(temperature_buffer), "%d°", temp_value);
     snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%s", temperature_buffer);
     
     snprintf(conditions_buffer, sizeof(conditions_buffer), "%s", conditions_tuple->value->cstring);
@@ -480,6 +481,10 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   if (show_date_t) {
     settings.ShowDate = show_date_t->value->int32 == 1;
   }
+  Tuple *show_city_t = dict_find(iterator, MESSAGE_KEY_ShowCity);
+  if (show_city_t) {
+    settings.ShowCity = show_city_t->value->int32 == 1;
+  }
   Tuple *seconds_choice_t = dict_find(iterator, MESSAGE_KEY_SecondsChoice);
   if (seconds_choice_t) {
     strcpy(settings.SecondsChoice, seconds_choice_t->value->cstring);
@@ -489,7 +494,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     settings.SecondsLimit = (int)seconds_limit_t->value->int32;
   }
   // Save and apply if any settings were changed
-  if (bg_color_t || text_color_t || temp_unit_t || show_date_t || seconds_choice_t || seconds_limit_t) {
+  if (bg_color_t || text_color_t || temp_unit_t || show_date_t || show_city_t || seconds_choice_t || seconds_limit_t) {
     prv_save_settings();
     prv_update_display();
     // Refetch weather if the temperature unit changed so the display updates
@@ -516,7 +521,7 @@ static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
 static void init(void) {
   prv_load_settings();
   create_main_window();
-  tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
+  tick_timer_service_subscribe(strncmp(settings.SecondsChoice, "hide", 4) == 0 ? MINUTE_UNIT: SECOND_UNIT, tick_handler);
   accel_tap_service_subscribe(tap_handler);
   battery_state_service_subscribe(battery_callback);
   battery_callback(battery_state_service_peek());

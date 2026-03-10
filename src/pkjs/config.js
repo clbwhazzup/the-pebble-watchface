@@ -48,10 +48,17 @@ module.exports = [
         "defaultValue": true
       },
       {
+        "type": "toggle",
+        "messageKey": "ShowCity",
+        "label": "Show City",
+        "defaultValue": true
+      },
+      {
         "type": "select",
         "messageKey": "SecondsChoice",
         "defaultValue": "show",
         "label": "Show Seconds",
+        "description": "Requires watchface restart",
         "options": [
           { "label": "Hide", "value": "hide" },
           { "label": "Show on Tap", "value": "tap" },

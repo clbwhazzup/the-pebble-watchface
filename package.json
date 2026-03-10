@@ -46,6 +46,7 @@
       "TextColor",
       "TemperatureUnit",
       "ShowDate",
+      "ShowCity",
       "SecondsChoice",
       "SecondsLimit"
     ],
