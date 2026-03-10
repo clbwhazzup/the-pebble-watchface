@@ -4,14 +4,15 @@
 
 #### My perfect collection of watchface features
 * Features
+  * Toggle / options for every display element (except time)
   * Weather temperature, high/low, humidity, and condtions icon
   * Steps and heart rate
-  * Day of week, month, day
-  * Battery level bar with percent
   * Configurable seconds
   * Location 
-  * Segment fonts
-    * DSEG7 Classic Mini Bold
+  * Day of week, month, day
+  * Battery level bar with percent
+  * Sunrise rise or set
+  * DSEG Segmented Digital Display Font Family
     * DSEG14 Classic Mini Bold
     * DSEG Weather
 #
@@ -25,7 +26,5 @@
   * Make positions more dependent on watch shape and size
   * Add seperators between sections
     * Could be similar to batter drawing
-  * Add humidity / chance of rain
-    * Probably next to weather icon
-  * Possibly different weather icons
-  * Steps and heart rate
+  * Option for humidity or precip. %
+  * Maybe different weather icons

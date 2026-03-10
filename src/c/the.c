@@ -174,19 +174,19 @@ static void create_humid_layer(void) {
 
 // Health handling
 static void health_handler(HealthEventType event, void *context) {
-  HealthMetric metric = HealthMetricStepCount;
-  HealthServiceAccessibilityMask mask;
-  bool any_data_available;
-  time_t start = time_start_of_today();
-  time_t end = time(NULL);
-  if (event == HealthEventSignificantUpdate || event == HealthEventMovementUpdate || event == HealthEventHeartRateUpdate) {
+  if (event == HealthEventHeartRateUpdate || event == HealthEventSignificantUpdate) {
+    HealthMetric metric = HealthMetricStepCount;
+    HealthServiceAccessibilityMask mask;
+    bool any_data_available;
+    time_t start = time_start_of_today();
+    time_t end = time(NULL);
     mask = health_service_metric_accessible(metric, start, end);
     any_data_available = mask & HealthServiceAccessibilityMaskAvailable;
     if (any_data_available) {
       APP_LOG(APP_LOG_LEVEL_INFO, "data available");
       HealthValue steps = health_service_sum_today(HealthMetricStepCount);
-      HealthValue hr = health_service_sum_today(HealthMetricHeartRateBPM);
-      APP_LOG(APP_LOG_LEVEL_INFO, "Steps: %d, HR: %d", (int)steps, (int)hr);
+      HealthValue hr = health_service_peek_current_value(HealthMetricHeartRateBPM);
+      APP_LOG(APP_LOG_LEVEL_INFO, "Steps: %d HR: %d", (int)steps, (int)hr);
       snprintf(steps_buffer, sizeof(steps_buffer), "%d", (int)steps);
       snprintf(hr_buffer, sizeof(hr_buffer), "%d", (int)hr);
       text_layer_set_text(s_steps_layer, steps_buffer);
