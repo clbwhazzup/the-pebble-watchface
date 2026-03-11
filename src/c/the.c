@@ -28,6 +28,7 @@ static TextLayer* s_rise_set_layer;
 static TextLayer* s_city_layer;
 static TextLayer* s_steps_layer;
 static TextLayer* s_hr_layer;
+static TextLayer* s_batt_percent_layer;
 static Layer* s_battery_layer;
 
 static GFont s_font_time;
@@ -54,6 +55,7 @@ int health_y;
 bool show_seconds_now;
 bool health_available;
 int battery_level;
+char batt[8];
 
 
 // Settings handling
@@ -83,6 +85,11 @@ static void prv_update_display() {
   text_layer_set_text_color(s_hl_layer, settings.TextColor);
   text_layer_set_text_color(s_rise_set_layer, settings.TextColor);
   text_layer_set_text_color(s_city_layer, settings.TextColor);
+  text_layer_set_text_color(s_steps_layer, settings.TextColor);
+  text_layer_set_text_color(s_hr_layer, settings.TextColor);
+  text_layer_set_text_color(s_humid_layer, settings.TextColor);
+  text_layer_set_text_color(s_batt_percent_layer, settings.BackgroundColor);
+  layer_mark_dirty(s_battery_layer);
 
   layer_set_hidden(text_layer_get_layer(s_date_layer), !settings.ShowDate);
   layer_set_hidden(text_layer_get_layer(s_city_layer), !settings.ShowCity);
@@ -97,7 +104,6 @@ static void prv_update_display() {
     show_seconds_now = true;
     layer_set_hidden(text_layer_get_layer(s_seconds_layer), false);
   }
-  layer_mark_dirty(s_battery_layer);
 }
 
 
@@ -225,34 +231,51 @@ static void battery_callback(BatteryChargeState state) {
   layer_mark_dirty(s_battery_layer);
 }
 static void battery_update_proc(Layer *layer, GContext *ctx) {
-  GRect bounds = layer_get_bounds(layer);
+  GRect l_bounds = layer_get_bounds(layer);
   // Find the width of the bar (inside the border)
-  int bar_width = ((battery_level * (bounds.size.w - 4)) / 100);
+  int bar_width = ((battery_level * (l_bounds.size.w - 4)) / 100);
   // Draw the border
-  graphics_context_set_stroke_color(ctx, GColorWhite);
-  graphics_draw_round_rect(ctx, bounds, 2);
+  graphics_context_set_stroke_color(ctx, settings.TextColor);
+  graphics_draw_round_rect(ctx, l_bounds, 2);
   // Choose color based on battery level
   GColor bar_color;
   if (battery_level <= 20) {
-    bar_color = PBL_IF_COLOR_ELSE(GColorRed, GColorWhite);
+    bar_color = PBL_IF_COLOR_ELSE(GColorRed, settings.TextColor);
   } else if (battery_level <= 40) {
-    bar_color = PBL_IF_COLOR_ELSE(GColorChromeYellow, GColorWhite);
+    bar_color = PBL_IF_COLOR_ELSE(GColorChromeYellow, settings.TextColor);
   } else {
-    bar_color = PBL_IF_COLOR_ELSE(GColorGreen, GColorWhite);
+    bar_color = PBL_IF_COLOR_ELSE(GColorGreen, settings.TextColor);
   }
   // Draw the filled bar inside the border
   graphics_context_set_fill_color(ctx, bar_color);
-  graphics_fill_rect(ctx, GRect(2, 2, bar_width, bounds.size.h - 4), 1, GCornerNone);
+  graphics_fill_rect(ctx, GRect(2, 2, bar_width, l_bounds.size.h - 4), 1, GCornerNone);
+
+  // Update the battery percentage text
+  snprintf(batt, sizeof(batt), "%d%%", battery_level);
+  APP_LOG(APP_LOG_LEVEL_INFO, "Battery: %s", batt);
+  text_layer_set_text(s_batt_percent_layer, batt);
 }
 static void create_battery_layer(void) {
   int bar_width = bounds.size.w / 3;
   int bar_height = 12;
-  int bar_x = ((bounds.size.w - bar_width) / 2);
+  int bar_x = (bounds.size.w - bar_width) / 2;
   int bar_y = bounds.size.h - bar_height - 2;
   s_battery_layer = layer_create(
     GRect(bar_x, bar_y, bar_width, bar_height));
   layer_set_update_proc(s_battery_layer, battery_update_proc);
   layer_add_child(window_get_root_layer(s_window), s_battery_layer);
+}
+static void create_batt_percent_layer(void) {
+  int l_width = bounds.size.w / 3;
+  int l_x = ((bounds.size.w - l_width) / 2) - 4;
+  s_batt_percent_layer = text_layer_create(
+      GRect(l_x, rise_set_y, l_width, 30));
+  text_layer_set_font(s_batt_percent_layer, s_font_small);
+  text_layer_set_text_color(s_batt_percent_layer, settings.BackgroundColor);
+  text_layer_set_background_color(s_batt_percent_layer, GColorClear);
+  text_layer_set_text_alignment(s_batt_percent_layer, GTextAlignmentRight);
+  text_layer_set_text(s_batt_percent_layer, "----");
+  layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_batt_percent_layer));
 }
 
 
@@ -314,15 +337,13 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     strftime(s_seconds_buffer, sizeof(s_seconds_buffer), "%S", tick_time);
     text_layer_set_text(s_seconds_layer, s_seconds_buffer);
   }
-  if (tick_time->tm_sec == 0) {
-    update_time();
-    
-  }
   if (tick_time->tm_min % 30 == 0 && tick_time->tm_sec == 0) {
     DictionaryIterator *iter;
     app_message_outbox_begin(&iter);
     dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
     app_message_outbox_send();
+  } else if (tick_time->tm_sec == 0) {
+    update_time();
   }
 }
 static void hide_seconds_callback(void *data) {
@@ -367,6 +388,7 @@ static void main_window_load(Window* window) {
   create_humid_layer();
   create_city_layer();
   create_battery_layer();
+  create_batt_percent_layer();
   create_steps_layer();
   create_hr_layer();
   update_time();
@@ -384,6 +406,7 @@ static void main_window_unload(Window* window) {
   text_layer_destroy(s_city_layer);
   text_layer_destroy(s_steps_layer);
   text_layer_destroy(s_hr_layer);
+  text_layer_destroy(s_batt_percent_layer);
   layer_destroy(s_battery_layer);
   fonts_unload_custom_font(s_font_medium);
   fonts_unload_custom_font(s_font_small);
