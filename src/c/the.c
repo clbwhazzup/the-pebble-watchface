@@ -5,10 +5,11 @@
 typedef struct ClaySettings {
   GColor BackgroundColor;
   GColor TextColor;
-  bool TemperatureUnit; // false = Celsius, true = Fahrenheit
+  char TemperatureUnit[8]; // false = Celsius, true = Fahrenheit
   bool ShowDate;
   bool ShowCity;
-  char SecondsChoice[10]; // "hide", "tap", "show"
+  char PercentChoice[8]; // false = humid, true = precip
+  char SecondsChoice[8]; // "hide", "tap", "show"
   int SecondsLimit; // 0-60
 } ClaySettings;
 static ClaySettings settings;
@@ -62,7 +63,8 @@ char batt[8];
 static void prv_default_settings() {
   settings.BackgroundColor = GColorBlack;
   settings.TextColor = GColorWhite;
-  settings.TemperatureUnit = false;
+  strcpy(settings.TemperatureUnit, "false");
+  strcpy(settings.PercentChoice, "false");
   settings.ShowDate = true;
   settings.ShowCity = true;
   strcpy(settings.SecondsChoice, "show");
@@ -246,6 +248,9 @@ static void battery_update_proc(Layer *layer, GContext *ctx) {
   } else {
     bar_color = PBL_IF_COLOR_ELSE(GColorGreen, settings.TextColor);
   }
+  // Draw background
+  graphics_context_set_fill_color(ctx, GColorDarkGray);
+  graphics_fill_rect(ctx, GRect(2, 2, l_bounds.size.w - 4, l_bounds.size.h - 4), 1, GCornerNone);
   // Draw the filled bar inside the border
   graphics_context_set_fill_color(ctx, bar_color);
   graphics_fill_rect(ctx, GRect(2, 2, bar_width, l_bounds.size.h - 4), 1, GCornerNone);
@@ -269,7 +274,7 @@ static void create_batt_percent_layer(void) {
   int l_width = bounds.size.w / 3;
   int l_x = ((bounds.size.w - l_width) / 2) - 4;
   s_batt_percent_layer = text_layer_create(
-      GRect(l_x, rise_set_y, l_width, 30));
+      GRect(l_x, rise_set_y, l_width, 12));
   text_layer_set_font(s_batt_percent_layer, s_font_small);
   text_layer_set_text_color(s_batt_percent_layer, settings.BackgroundColor);
   text_layer_set_background_color(s_batt_percent_layer, GColorClear);
@@ -430,6 +435,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   Tuple *temp_tuple = dict_find(iterator, MESSAGE_KEY_TEMPERATURE);
   Tuple *conditions_tuple = dict_find(iterator, MESSAGE_KEY_CONDITIONS);
   Tuple *humid_tuple = dict_find(iterator, MESSAGE_KEY_HUMIDITY);
+  Tuple *precip_tuple = dict_find(iterator, MESSAGE_KEY_PRECIP);
   Tuple *high_tuple = dict_find(iterator, MESSAGE_KEY_HIGH);
   Tuple *low_tuple = dict_find(iterator, MESSAGE_KEY_LOW);
   Tuple *sunrise_tuple = dict_find(iterator, MESSAGE_KEY_SUNRISE);
@@ -456,7 +462,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     const char *sunset_str = sunset_tuple ? sunset_tuple->value->cstring : "";
 
     // Convert to Fahrenheit if setting is enabled
-    if (settings.TemperatureUnit) {
+    if (strncmp(settings.TemperatureUnit, "true", 4) == 0) {
       temp_value = (temp_value * 9 / 5) + 32;
       high_value = (high_value * 9 / 5) + 32;
       low_value = (low_value * 9 / 5) + 32;
@@ -467,7 +473,12 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     snprintf(conditions_buffer, sizeof(conditions_buffer), "%s", conditions_tuple->value->cstring);
     snprintf(condition_layer_buffer, sizeof(condition_layer_buffer), "%s", conditions_buffer);
 
-    snprintf(humid_buffer, sizeof(humid_buffer), "%d%%", (int)humid_tuple->value->int32);
+    if (strncmp(settings.PercentChoice, "true", 4) == 0)
+    {
+      snprintf(humid_buffer, sizeof(humid_buffer), "%d%%", (int)precip_tuple->value->int32);
+    } else {
+      snprintf(humid_buffer, sizeof(humid_buffer), "%d%%", (int)humid_tuple->value->int32);
+    }
     snprintf(humid_layer_buffer, sizeof(humid_layer_buffer), "%s", humid_buffer);
 
     snprintf(hl_buffer, sizeof(hl_buffer), "%d°/%d°", high_value, low_value);
@@ -498,7 +509,11 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   }
   Tuple *temp_unit_t = dict_find(iterator, MESSAGE_KEY_TemperatureUnit);
   if (temp_unit_t) {
-    settings.TemperatureUnit = temp_unit_t->value->int32 == 1;
+    strcpy(settings.TemperatureUnit, temp_unit_t->value->cstring);
+  }
+  Tuple *percent_choice_t = dict_find(iterator, MESSAGE_KEY_PercentChoice);
+  if (percent_choice_t){
+    strcpy(settings.PercentChoice, percent_choice_t->value->cstring);
   }
   Tuple *show_date_t = dict_find(iterator, MESSAGE_KEY_ShowDate);
   if (show_date_t) {

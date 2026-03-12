@@ -5,7 +5,7 @@
 #### My perfect collection of watchface features
 * Features
   * Toggle / options for every display element (except time)
-  * Weather temperature, high/low, humidity, and condtions icon
+  * Remperature, high/low, humidity, precipitation %, and condtions icon
   * Steps and heart rate
   * Configurable seconds
   * Location 
@@ -24,7 +24,7 @@
     * Kind of
 * TODO
   * Make positions more dependent on watch shape and size
+  * Show hide everything
   * Add seperators between sections
-    * Could be similar to batter drawing
-  * Option for humidity or precip. %
+    * Could be similar to battery drawing
   * Maybe different weather icons

@@ -45,7 +45,7 @@ function locationSuccess(pos) {
       'latitude=' + pos.coords.latitude +
       '&longitude=' + pos.coords.longitude +
       '&current=temperature_2m,relative_humidity_2m,weather_code' +
-      '&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset' +
+      '&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max' +
       '&timezone=auto';
 
   xhrRequest(url, 'GET',
@@ -55,6 +55,7 @@ function locationSuccess(pos) {
       var temperature = Math.round(json.current.temperature_2m);
       var conditions = weatherCodeToCondition(json.current.weather_code);
       var humidity = Math.round(json.current.relative_humidity_2m);
+      var precip = json.daily.precipitation_probability_max[0];
       var high = Math.round(json.daily.temperature_2m_max[0]);
       var low = Math.round(json.daily.temperature_2m_min[0]);
       var sunrise = json.daily.sunrise[0];
@@ -69,6 +70,7 @@ function locationSuccess(pos) {
           'TEMPERATURE': temperature,
           'CONDITIONS': conditions,
           'HUMIDITY': humidity,
+          'PRECIP': precip,
           'HIGH': high,
           'LOW': low,
           'SUNRISE': sunrise,

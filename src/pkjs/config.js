@@ -1,11 +1,7 @@
 module.exports = [
   {
     "type": "heading",
-    "defaultValue": "Watchface Settings"
-  },
-  {
-    "type": "text",
-    "defaultValue": "Customize your watchface appearance and preferences."
+    "defaultValue": "Settings"
   },
   {
     "type": "section",
@@ -33,31 +29,35 @@ module.exports = [
     "items": [
       {
         "type": "heading",
-        "defaultValue": "Preferences"
+        "defaultValue": "Display Settings"
       },
       {
-        "type": "toggle",
+        "type": "select",
         "messageKey": "TemperatureUnit",
-        "label": "Use Fahrenheit",
-        "defaultValue": false
+        "label": "Temperature Unit",
+        "description": "Choose Fahrenheit or Celcuis as your temperature unit",
+        "defaultValue": "false",
+        "options": [
+          { "label": "Fahrenheit", "value": "true"},
+          { "label": "Celcius", "value": "false"}
+        ]
       },
       {
-        "type": "toggle",
-        "messageKey": "ShowDate",
-        "label": "Show Date",
-        "defaultValue": true
-      },
-      {
-        "type": "toggle",
-        "messageKey": "ShowCity",
-        "label": "Show City",
-        "defaultValue": true
+        "type": "select",
+        "messageKey": "PercentChoice",
+        "label": "Percent Slot",
+        "description": "Choose to show current humidity or daily max preciptation",
+        "defaultValue": "false",
+        "options": [
+          { "label": "Precipitation", "value": "true"},
+          { "label": "Humidity", "value": "false"}
+        ]
       },
       {
         "type": "select",
         "messageKey": "SecondsChoice",
         "defaultValue": "show",
-        "label": "Show Seconds",
+        "label": "Seconds Slot",
         "description": "Requires watchface restart",
         "options": [
           { "label": "Hide", "value": "hide" },
@@ -73,6 +73,27 @@ module.exports = [
         "min": 0,
         "max": 60,
         "step": 1
+      }
+    ]
+  },
+  {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
+        "defaultValue": "Display Toggles"
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowDate",
+        "label": "Show Date",
+        "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowCity",
+        "label": "Show City",
+        "defaultValue": true
       }
     ]
   },

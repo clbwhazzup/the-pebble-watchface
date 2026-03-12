@@ -10,7 +10,7 @@
     "@rebble/clay": "^1.0.8"
   },
   "pebble": {
-    "displayName": "the",
+    "displayName": "Segmented Info",
     "uuid": "25be9fe3-ee36-4643-8ece-28a5190e74ba",
     "sdkVersion": "3",
     "enableMultiJS": true,
@@ -42,6 +42,8 @@
       "SUNRISE",
       "SUNSET",
       "CITY",
+      "PRECIP",
+      "PercentChoice",
       "BackgroundColor",
       "TextColor",
       "TemperatureUnit",
@@ -67,18 +69,11 @@
         {
           "type": "font",
           "name": "FONT_DSEGFT_12",
-          "file": "fonts/DSEG14ClassicMini-Bold.ttf",
-          "characterRegex": "[0-9a-zA-Z/:°,% -]"
+          "file": "fonts/DSEG14ClassicMini-Bold.ttf"
         },
         {
           "type": "font",
           "name": "FONT_DSEGFT_20",
-          "file": "fonts/DSEG14ClassicMini-Bold.ttf",
-          "characterRegex": "[0-9a-zA-Z/:°,% -]"
-        },
-        {
-          "type": "font",
-          "name": "FONT_DSEGFT_24",
           "file": "fonts/DSEG14ClassicMini-Bold.ttf",
           "characterRegex": "[0-9a-zA-Z/:°,% -]"
         }
