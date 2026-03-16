@@ -94,6 +94,12 @@ module.exports = [
         "messageKey": "ShowCity",
         "label": "Show City",
         "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowHealth",
+        "label": "Show Health",
+        "defaultValue": false
       }
     ]
   },

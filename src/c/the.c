@@ -8,6 +8,7 @@ typedef struct ClaySettings {
   char TemperatureUnit[8]; // false = Celsius, true = Fahrenheit
   bool ShowDate;
   bool ShowCity;
+  bool ShowHealth;
   char PercentChoice[8]; // false = humid, true = precip
   char SecondsChoice[8]; // "hide", "tap", "show"
   int SecondsLimit; // 0-60
@@ -25,7 +26,8 @@ static TextLayer* s_conditions_layer;
 static TextLayer* s_humid_layer;
 static TextLayer* s_date_layer;
 static TextLayer* s_hl_layer;
-static TextLayer* s_rise_set_layer;
+static TextLayer* s_rise_layer;
+static TextLayer* s_set_layer;
 static TextLayer* s_city_layer;
 static TextLayer* s_steps_layer;
 static TextLayer* s_hr_layer;
@@ -67,6 +69,7 @@ static void prv_default_settings() {
   strcpy(settings.PercentChoice, "false");
   settings.ShowDate = true;
   settings.ShowCity = true;
+  settings.ShowHealth = false;
   strcpy(settings.SecondsChoice, "show");
   settings.SecondsLimit = 5000;
 }
@@ -85,7 +88,8 @@ static void prv_update_display() {
   text_layer_set_text_color(s_seconds_layer, settings.TextColor);
   text_layer_set_text_color(s_conditions_layer, settings.TextColor);
   text_layer_set_text_color(s_hl_layer, settings.TextColor);
-  text_layer_set_text_color(s_rise_set_layer, settings.TextColor);
+  text_layer_set_text_color(s_rise_layer, settings.TextColor);
+  text_layer_set_text_color(s_set_layer, settings.TextColor);
   text_layer_set_text_color(s_city_layer, settings.TextColor);
   text_layer_set_text_color(s_steps_layer, settings.TextColor);
   text_layer_set_text_color(s_hr_layer, settings.TextColor);
@@ -95,6 +99,8 @@ static void prv_update_display() {
 
   layer_set_hidden(text_layer_get_layer(s_date_layer), !settings.ShowDate);
   layer_set_hidden(text_layer_get_layer(s_city_layer), !settings.ShowCity);
+  layer_set_hidden(text_layer_get_layer(s_hr_layer), !settings.ShowHealth);
+  layer_set_hidden(text_layer_get_layer(s_steps_layer), !settings.ShowHealth);
   if (strncmp(settings.SecondsChoice, "hide", 4) == 0) {
     show_seconds_now = false;
     layer_set_hidden(text_layer_get_layer(s_seconds_layer), true);
@@ -115,12 +121,12 @@ static void set_positions(void) {
   int time_height = 42;
   int medium_height = 20;
   int small_height = 12;
-  time_y = (bounds.size.h / 2) - 40;
+  time_y = (bounds.size.h / 2) - 15;
   hl_y = 24;
   weather_y = 10;
   condition_y = -5;
   rise_set_y = bounds.size.h - small_height - 2;
-  date_y = rise_set_y - medium_height - 5;
+  date_y = hl_y + medium_height;
   city_y = time_y + time_height + 8;
   health_y = city_y + small_height + 5;
   humid_y = condition_y + small_height / 2 + 5;
@@ -135,7 +141,7 @@ static void create_city_layer(void) {
   text_layer_set_text_color(s_city_layer, settings.TextColor);
   text_layer_set_background_color(s_city_layer, GColorClear);
   text_layer_set_text_alignment(s_city_layer, GTextAlignmentLeft);
-  text_layer_set_text(s_city_layer, "City");
+  text_layer_set_text(s_city_layer, "-----------");
   layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_city_layer));
 };
 
@@ -168,7 +174,7 @@ static void create_hl_layer(void) {
   text_layer_set_text_color(s_hl_layer, settings.TextColor);
   text_layer_set_background_color(s_hl_layer, GColorClear);
   text_layer_set_text_alignment(s_hl_layer, GTextAlignmentRight);
-  text_layer_set_text(s_hl_layer, "---");
+  text_layer_set_text(s_hl_layer, "-------");
   layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_hl_layer));
 }
 static void create_humid_layer(void) {
@@ -178,14 +184,14 @@ static void create_humid_layer(void) {
   text_layer_set_text_color(s_humid_layer, settings.TextColor);
   text_layer_set_background_color(s_humid_layer, GColorClear);
   text_layer_set_text_alignment(s_humid_layer, GTextAlignmentRight);
-  text_layer_set_text(s_humid_layer, "---");
+  text_layer_set_text(s_humid_layer, "----");
   layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_humid_layer));
 }
 
 
 // Health handling
 static void health_handler(HealthEventType event, void *context) {
-  if (event == HealthEventHeartRateUpdate || event == HealthEventSignificantUpdate) {
+  if (health_available && (event == HealthEventHeartRateUpdate || event == HealthEventSignificantUpdate)) {
     HealthMetric metric = HealthMetricStepCount;
     HealthServiceAccessibilityMask mask;
     bool any_data_available;
@@ -315,15 +321,25 @@ static void create_seconds_layer(void) {
   text_layer_set_text(s_seconds_layer, "--");
   layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_seconds_layer));
 }
-static void create_rise_set_layer(void) {
-  s_rise_set_layer = text_layer_create(
+static void create_rise_layer(void) {
+  s_rise_layer = text_layer_create(
       GRect(0, rise_set_y, bounds.size.w, 30));
-  text_layer_set_font(s_rise_set_layer, s_font_small);
-  text_layer_set_text_color(s_rise_set_layer, settings.TextColor);
-  text_layer_set_background_color(s_rise_set_layer, GColorClear);
-  text_layer_set_text_alignment(s_rise_set_layer, GTextAlignmentCenter);
-  text_layer_set_text(s_rise_set_layer, "---");
-  layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_rise_set_layer));
+  text_layer_set_font(s_rise_layer, s_font_small);
+  text_layer_set_text_color(s_rise_layer, settings.TextColor);
+  text_layer_set_background_color(s_rise_layer, GColorClear);
+  text_layer_set_text_alignment(s_rise_layer, GTextAlignmentLeft);
+  text_layer_set_text(s_rise_layer, "---");
+  layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_rise_layer));
+}
+static void create_set_layer(void) {
+  s_set_layer = text_layer_create(
+      GRect(0, rise_set_y, bounds.size.w, 30));
+  text_layer_set_font(s_set_layer, s_font_small);
+  text_layer_set_text_color(s_set_layer, settings.TextColor);
+  text_layer_set_background_color(s_set_layer, GColorClear);
+  text_layer_set_text_alignment(s_set_layer, GTextAlignmentRight);
+  text_layer_set_text(s_set_layer, "---");
+  layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_set_layer));
 }
 static void update_time() {
   time_t temp = time(NULL);
@@ -387,7 +403,8 @@ static void main_window_load(Window* window) {
   create_seconds_layer();
   create_date_layer();
   create_hl_layer();
-  create_rise_set_layer();
+  create_rise_layer();
+  create_set_layer();
   create_weather_layer();
   create_conditons_layer();
   create_humid_layer();
@@ -407,7 +424,8 @@ static void main_window_unload(Window* window) {
   text_layer_destroy(s_humid_layer);
   text_layer_destroy(s_date_layer);
   text_layer_destroy(s_hl_layer);
-  text_layer_destroy(s_rise_set_layer);
+  text_layer_destroy(s_rise_layer);
+  text_layer_destroy(s_set_layer);
   text_layer_destroy(s_city_layer);
   text_layer_destroy(s_steps_layer);
   text_layer_destroy(s_hr_layer);
@@ -445,7 +463,8 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   static char condition_layer_buffer[8];
   static char humid_layer_buffer[8];
   static char hl_layer_buffer[16];
-  static char rise_set_layer_buffer[48];
+  static char rise_layer_buffer[12];
+  static char set_layer_buffer[12];
   static char city_layer_buffer[12];
  
   if (temp_tuple && conditions_tuple) {
@@ -453,7 +472,8 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     static char conditions_buffer[8];
     static char humid_buffer[8];
     static char hl_buffer[16];
-    static char rise_set_buffer[48];
+    static char rise_buffer[12];
+    static char set_buffer[12];
     static char city_buffer[12];
     int temp_value = temp_tuple->value->int32;
     int high_value = high_tuple ? high_tuple->value->int32 : 0;
@@ -484,8 +504,10 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     snprintf(hl_buffer, sizeof(hl_buffer), "%d°/%d°", high_value, low_value);
     snprintf(hl_layer_buffer, sizeof(hl_layer_buffer), "%s", hl_buffer);
 
-    snprintf(rise_set_buffer, sizeof(rise_set_buffer), "%s                        %s", sunrise_str, sunset_str);
-    snprintf(rise_set_layer_buffer, sizeof(rise_set_layer_buffer), "%s", rise_set_buffer);
+    snprintf(rise_buffer, sizeof(rise_buffer), "%s", sunrise_str);
+    snprintf(rise_layer_buffer, sizeof(rise_layer_buffer), "%s", rise_buffer);
+    snprintf(set_buffer, sizeof(set_buffer), "%s", sunset_str);
+    snprintf(set_layer_buffer, sizeof(set_layer_buffer), "%s", set_buffer);
     if (city_tuple) {
       snprintf(city_buffer, sizeof(city_buffer), "%s", city_tuple->value->cstring);
       snprintf(city_layer_buffer, sizeof(city_layer_buffer), "%s", city_buffer);
@@ -496,7 +518,8 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     text_layer_set_text(s_conditions_layer, condition_layer_buffer);
     text_layer_set_text(s_humid_layer, humid_layer_buffer);
     text_layer_set_text(s_hl_layer, hl_layer_buffer);
-    text_layer_set_text(s_rise_set_layer, rise_set_layer_buffer);
+    text_layer_set_text(s_rise_layer, rise_layer_buffer);
+    text_layer_set_text(s_set_layer, set_layer_buffer);
   }
   // Check for Clay settings
   Tuple *bg_color_t = dict_find(iterator, MESSAGE_KEY_BackgroundColor);
@@ -522,6 +545,10 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   Tuple *show_city_t = dict_find(iterator, MESSAGE_KEY_ShowCity);
   if (show_city_t) {
     settings.ShowCity = show_city_t->value->int32 == 1;
+  }
+  Tuple *show_health_t = dict_find(iterator, MESSAGE_KEY_ShowHealth);
+  if (show_health_t){
+    settings.ShowHealth = show_health_t->value->int32 == 1;
   }
   Tuple *seconds_choice_t = dict_find(iterator, MESSAGE_KEY_SecondsChoice);
   if (seconds_choice_t) {

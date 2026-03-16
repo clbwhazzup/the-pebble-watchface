@@ -49,6 +49,7 @@
       "TemperatureUnit",
       "ShowDate",
       "ShowCity",
+      "ShowHealth",
       "SecondsChoice",
       "SecondsLimit"
     ],
