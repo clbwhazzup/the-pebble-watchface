@@ -4,6 +4,10 @@ module.exports = [
     "defaultValue": "Settings"
   },
   {
+    "type": "text",
+    "defaultValue": "Some settings affect battery without restart"
+  },
+  {
     "type": "section",
     "items": [
       {
@@ -47,10 +51,24 @@ module.exports = [
         "messageKey": "PercentChoice",
         "label": "Percent Slot",
         "description": "Choose to show current humidity or daily max preciptation",
-        "defaultValue": "false",
+        "defaultValue": "humid",
         "options": [
-          { "label": "Precipitation", "value": "true"},
-          { "label": "Humidity", "value": "false"}
+          { "label": "Precipitation", "value": "precip"},
+          { "label": "Humidity", "value": "humid"},
+          { "label": "Hide", "value": "hide"}
+        ]
+      },
+      {
+        "type": "select",
+        "messageKey": "BatteryChoice",
+        "label": "Battery Slot",
+        "description": "Requires watchface restart. Choose to show the bar, the percentage, both, or neither",
+        "defaultValue": "both",
+        "options": [
+          { "label": "Show Both", "value": "both"},
+          { "label": "Show Bar", "value": "bar"},
+          { "label": "Show Pecentage", "value": "percent"},
+          { "label": "Hide Both", "value": "hide"}
         ]
       },
       {
@@ -60,9 +78,9 @@ module.exports = [
         "label": "Seconds Slot",
         "description": "Requires watchface restart",
         "options": [
-          { "label": "Hide", "value": "hide" },
+          { "label": "Show Always", "value": "show" },
           { "label": "Show on Tap", "value": "tap" },
-          { "label": "Show Normally", "value": "show" }
+          { "label": "Hide", "value": "hide" }
         ]
       },
       {
@@ -100,6 +118,30 @@ module.exports = [
         "messageKey": "ShowHealth",
         "label": "Show Health",
         "defaultValue": false
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowConditions",
+        "label": "Show Conditions",
+        "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowHighLow",
+        "label": "Show High/Low Temperatures",
+        "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowTemp",
+        "label": "Show Current Temperature",
+        "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowRiseSet",
+        "label": "Show Sunrise and Sunset",
+        "defaultValue": true
       }
     ]
   },

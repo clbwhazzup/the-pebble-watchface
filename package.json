@@ -50,8 +50,13 @@
       "ShowDate",
       "ShowCity",
       "ShowHealth",
+      "ShowConditions",
+      "ShowHighLow",
+      "ShowTemp",
+      "ShowRiseSet",
       "SecondsChoice",
-      "SecondsLimit"
+      "SecondsLimit",
+      "BatteryChoice"
     ],
     "resources": {
       "media": [

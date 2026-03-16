@@ -9,8 +9,13 @@ typedef struct ClaySettings {
   bool ShowDate;
   bool ShowCity;
   bool ShowHealth;
-  char PercentChoice[8]; // false = humid, true = precip
-  char SecondsChoice[8]; // "hide", "tap", "show"
+  bool ShowConditions;
+  bool ShowHighLow;
+  bool ShowTemp;
+  bool ShowRiseSet;
+  char PercentChoice[8]; // hide, humid, precip
+  char SecondsChoice[8]; // hide, tap, show
+  char BatteryChoice[8]; // bar, percent, both, hide
   int SecondsLimit; // 0-60
 } ClaySettings;
 static ClaySettings settings;
@@ -66,11 +71,17 @@ static void prv_default_settings() {
   settings.BackgroundColor = GColorBlack;
   settings.TextColor = GColorWhite;
   strcpy(settings.TemperatureUnit, "false");
-  strcpy(settings.PercentChoice, "false");
+  strcpy(settings.PercentChoice, "humid");
   settings.ShowDate = true;
   settings.ShowCity = true;
   settings.ShowHealth = false;
+  settings.ShowConditions = true;
+  settings.ShowHighLow = true;
+  settings.ShowTemp = true;
+  settings.ShowRiseSet = true;
+  strcpy(settings.PercentChoice, "humid");
   strcpy(settings.SecondsChoice, "show");
+  strcpy(settings.BatteryChoice, "both");
   settings.SecondsLimit = 5000;
 }
 static void prv_save_settings() {
@@ -94,13 +105,16 @@ static void prv_update_display() {
   text_layer_set_text_color(s_steps_layer, settings.TextColor);
   text_layer_set_text_color(s_hr_layer, settings.TextColor);
   text_layer_set_text_color(s_humid_layer, settings.TextColor);
-  text_layer_set_text_color(s_batt_percent_layer, settings.BackgroundColor);
-  layer_mark_dirty(s_battery_layer);
 
   layer_set_hidden(text_layer_get_layer(s_date_layer), !settings.ShowDate);
   layer_set_hidden(text_layer_get_layer(s_city_layer), !settings.ShowCity);
   layer_set_hidden(text_layer_get_layer(s_hr_layer), !settings.ShowHealth);
   layer_set_hidden(text_layer_get_layer(s_steps_layer), !settings.ShowHealth);
+  layer_set_hidden(text_layer_get_layer(s_conditions_layer), !settings.ShowConditions);
+  layer_set_hidden(text_layer_get_layer(s_hl_layer), !settings.ShowHighLow);
+  layer_set_hidden(text_layer_get_layer(s_weather_layer), !settings.ShowTemp);
+  layer_set_hidden(text_layer_get_layer(s_rise_layer), !settings.ShowRiseSet);
+  layer_set_hidden(text_layer_get_layer(s_set_layer), !settings.ShowRiseSet);
   if (strncmp(settings.SecondsChoice, "hide", 4) == 0) {
     show_seconds_now = false;
     layer_set_hidden(text_layer_get_layer(s_seconds_layer), true);
@@ -112,6 +126,29 @@ static void prv_update_display() {
     show_seconds_now = true;
     layer_set_hidden(text_layer_get_layer(s_seconds_layer), false);
   }
+
+  if (strncmp(settings.PercentChoice, "hide", 4) == 0){
+      layer_set_hidden(text_layer_get_layer(s_humid_layer), true);
+  } else {
+    layer_set_hidden(text_layer_get_layer(s_humid_layer), false);
+  }
+
+  if (strncmp(settings.BatteryChoice, "bar", 3) == 0) {
+    layer_set_hidden(s_battery_layer, false);
+    layer_set_hidden(text_layer_get_layer(s_batt_percent_layer), true);
+  } else if (strncmp(settings.BatteryChoice, "percent", 6) == 0) {
+    layer_set_hidden(s_battery_layer, true);
+    layer_set_hidden(text_layer_get_layer(s_batt_percent_layer), false);
+    text_layer_set_text_color(s_batt_percent_layer, settings.TextColor);
+  } else if (strncmp(settings.BatteryChoice, "both", 4) == 0) {
+    layer_set_hidden(s_battery_layer, false);
+    layer_set_hidden(text_layer_get_layer(s_batt_percent_layer), false);
+    text_layer_set_text_color(s_batt_percent_layer, settings.BackgroundColor);
+  } else if (strncmp(settings.BatteryChoice, "hide", 4) == 0) {
+    layer_set_hidden(s_battery_layer, true);
+    layer_set_hidden(text_layer_get_layer(s_batt_percent_layer), true);
+  }
+  layer_mark_dirty(s_battery_layer);
 }
 
 
@@ -277,7 +314,7 @@ static void create_battery_layer(void) {
   layer_add_child(window_get_root_layer(s_window), s_battery_layer);
 }
 static void create_batt_percent_layer(void) {
-  int l_width = bounds.size.w / 3;
+  int l_width = 48;
   int l_x = ((bounds.size.w - l_width) / 2) - 4;
   s_batt_percent_layer = text_layer_create(
       GRect(l_x, rise_set_y, l_width, 12));
@@ -493,10 +530,10 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     snprintf(conditions_buffer, sizeof(conditions_buffer), "%s", conditions_tuple->value->cstring);
     snprintf(condition_layer_buffer, sizeof(condition_layer_buffer), "%s", conditions_buffer);
 
-    if (strncmp(settings.PercentChoice, "true", 4) == 0)
+    if (strncmp(settings.PercentChoice, "precip", 4) == 0)
     {
       snprintf(humid_buffer, sizeof(humid_buffer), "%d%%", (int)precip_tuple->value->int32);
-    } else {
+    } else if (strncmp(settings.PercentChoice, "humid", 5) == 0){
       snprintf(humid_buffer, sizeof(humid_buffer), "%d%%", (int)humid_tuple->value->int32);
     }
     snprintf(humid_layer_buffer, sizeof(humid_layer_buffer), "%s", humid_buffer);
@@ -550,6 +587,22 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   if (show_health_t){
     settings.ShowHealth = show_health_t->value->int32 == 1;
   }
+  Tuple *show_conditions_t = dict_find(iterator, MESSAGE_KEY_ShowConditions);
+  if (show_conditions_t){
+    settings.ShowConditions = show_conditions_t->value->int32 == 1;
+  }
+  Tuple *show_high_low_t = dict_find(iterator, MESSAGE_KEY_ShowHighLow);
+  if (show_high_low_t){
+    settings.ShowHighLow = show_high_low_t->value->int32 == 1;
+  }
+  Tuple *show_temp_t = dict_find(iterator, MESSAGE_KEY_ShowTemp);
+  if (show_temp_t){
+    settings.ShowTemp = show_temp_t->value->int32 == 1;
+  }
+  Tuple *show_rise_set_t = dict_find(iterator, MESSAGE_KEY_ShowRiseSet);
+  if (show_rise_set_t){
+    settings.ShowRiseSet = show_rise_set_t->value->int32 == 1;
+  }
   Tuple *seconds_choice_t = dict_find(iterator, MESSAGE_KEY_SecondsChoice);
   if (seconds_choice_t) {
     strcpy(settings.SecondsChoice, seconds_choice_t->value->cstring);
@@ -557,6 +610,10 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   Tuple *seconds_limit_t = dict_find(iterator, MESSAGE_KEY_SecondsLimit);
   if (seconds_limit_t) {
     settings.SecondsLimit = (int)seconds_limit_t->value->int32;
+  }
+  Tuple *battery_choice_t = dict_find(iterator, MESSAGE_KEY_BatteryChoice);
+  if (battery_choice_t){
+    strcpy(settings.BatteryChoice, battery_choice_t->value->cstring);
   }
   // Save and apply if any settings were changed
   if (bg_color_t || text_color_t || temp_unit_t || show_date_t || show_city_t || seconds_choice_t || seconds_limit_t) {
@@ -588,8 +645,11 @@ static void init(void) {
   create_main_window();
   tick_timer_service_subscribe(strncmp(settings.SecondsChoice, "hide", 4) == 0 ? MINUTE_UNIT: SECOND_UNIT, tick_handler);
   accel_tap_service_subscribe(tap_handler);
-  battery_state_service_subscribe(battery_callback);
-  battery_callback(battery_state_service_peek());
+  if (strncmp(settings.BatteryChoice, "hide", 4) != 0)
+  {
+    battery_state_service_subscribe(battery_callback);
+    battery_callback(battery_state_service_peek());
+  }
   if(!health_service_events_subscribe(health_handler, NULL)) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "Health not available!");
     health_available = false;
