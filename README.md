@@ -7,13 +7,12 @@
 ###### Only compatible with rectangular watches
 * Features
   * Toggle / options for every display element (except time)
-  * Remperature, high/low, humidity, precipitation %, and condtions icon
+  * Temperature, high/low, humidity, precipitation %, conditions icon, sunrise and sunset times, served from open-meteo.com
   * Steps and heart rate
   * Configurable seconds
-  * Location 
+  * Location, reverse geocoding through bigdatacloud.net
   * Day of week, month, day
   * Battery level bar with percentage
-  * Sunrise and sunset times
   * DSEG Segmented Digital Display Font Family
     * DSEG14 Classic Mini Bold
     * DSEG Weather

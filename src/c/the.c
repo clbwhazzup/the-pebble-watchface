@@ -163,7 +163,7 @@ static void set_positions(void) {
   weather_y = 10;
   condition_y = -5;
   rise_set_y = bounds.size.h - small_height - 2;
-  date_y = hl_y + medium_height;
+  date_y = time_y - medium_height - 5;
   city_y = time_y + time_height + 8;
   health_y = city_y + small_height + 5;
   humid_y = condition_y + small_height / 2 + 5;
