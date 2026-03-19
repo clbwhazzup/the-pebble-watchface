@@ -13,6 +13,7 @@ typedef struct ClaySettings {
   bool ShowHighLow;
   bool ShowTemp;
   bool ShowRiseSet;
+  bool ShowDivider;
   char PercentChoice[8]; // hide, humid, precip
   char SecondsChoice[8]; // hide, tap, show
   char BatteryChoice[8]; // bar, percent, both, hide
@@ -38,6 +39,7 @@ static TextLayer* s_steps_layer;
 static TextLayer* s_hr_layer;
 static TextLayer* s_batt_percent_layer;
 static Layer* s_battery_layer;
+static Layer* s_divider_layer;
 
 static GFont s_font_time;
 static GFont s_font_medium;
@@ -60,6 +62,8 @@ int humid_y;
 int rise_set_y;
 int city_y;
 int health_y;
+int divider_1_y;
+int divider_2_y;
 bool show_seconds_now;
 bool health_available;
 int battery_level;
@@ -79,6 +83,7 @@ static void prv_default_settings() {
   settings.ShowHighLow = true;
   settings.ShowTemp = true;
   settings.ShowRiseSet = true;
+  settings.ShowDivider = true;
   strcpy(settings.PercentChoice, "humid");
   strcpy(settings.SecondsChoice, "show");
   strcpy(settings.BatteryChoice, "both");
@@ -115,6 +120,7 @@ static void prv_update_display() {
   layer_set_hidden(text_layer_get_layer(s_weather_layer), !settings.ShowTemp);
   layer_set_hidden(text_layer_get_layer(s_rise_layer), !settings.ShowRiseSet);
   layer_set_hidden(text_layer_get_layer(s_set_layer), !settings.ShowRiseSet);
+  layer_set_hidden(s_divider_layer, !settings.ShowDivider);
   if (strncmp(settings.SecondsChoice, "hide", 4) == 0) {
     show_seconds_now = false;
     layer_set_hidden(text_layer_get_layer(s_seconds_layer), true);
@@ -136,7 +142,7 @@ static void prv_update_display() {
   if (strncmp(settings.BatteryChoice, "bar", 3) == 0) {
     layer_set_hidden(s_battery_layer, false);
     layer_set_hidden(text_layer_get_layer(s_batt_percent_layer), true);
-  } else if (strncmp(settings.BatteryChoice, "percent", 6) == 0) {
+  } else if (strncmp(settings.BatteryChoice, "percent", 7) == 0) {
     layer_set_hidden(s_battery_layer, true);
     layer_set_hidden(text_layer_get_layer(s_batt_percent_layer), false);
     text_layer_set_text_color(s_batt_percent_layer, settings.TextColor);
@@ -149,12 +155,12 @@ static void prv_update_display() {
     layer_set_hidden(text_layer_get_layer(s_batt_percent_layer), true);
   }
   layer_mark_dirty(s_battery_layer);
+  layer_mark_dirty(s_divider_layer);
 }
 
 
 // Positioning
 static void set_positions(void) {
-  bounds = layer_get_bounds(window_layer);
   int time_height = 42;
   int medium_height = 20;
   int small_height = 12;
@@ -165,8 +171,26 @@ static void set_positions(void) {
   rise_set_y = bounds.size.h - small_height - 2;
   date_y = time_y - medium_height - 5;
   city_y = time_y + time_height + 8;
-  health_y = city_y + small_height + 5;
+  health_y = rise_set_y - small_height - 5;
   humid_y = condition_y + small_height / 2 + 5;
+  divider_1_y = (date_y + hl_y + small_height) / 2;
+  divider_2_y = (city_y + health_y + small_height) / 2;
+}
+
+
+// Divider layer
+static void divider_graphic(Layer* layer, GContext* ctx) {
+  graphics_context_set_stroke_color(ctx, settings.TextColor);
+  graphics_context_set_stroke_width(ctx, 1);
+  graphics_draw_line(ctx, GPoint(0, divider_1_y), GPoint(bounds.size.w, divider_1_y));
+  graphics_draw_line(ctx, GPoint(0, divider_2_y), GPoint(bounds.size.w, divider_2_y));
+}
+static void create_divider_layer(void) {
+  s_divider_layer = layer_create(
+    GRect(0, 0, bounds.size.w, bounds.size.h));
+  layer_set_update_proc(s_divider_layer, divider_graphic);
+  layer_add_child(window_get_root_layer(s_window), s_divider_layer);
+  layer_mark_dirty(s_divider_layer);
 }
 
 
@@ -450,6 +474,7 @@ static void main_window_load(Window* window) {
   create_batt_percent_layer();
   create_steps_layer();
   create_hr_layer();
+  create_divider_layer();
   update_time();
   prv_update_display();
 }
@@ -468,6 +493,7 @@ static void main_window_unload(Window* window) {
   text_layer_destroy(s_hr_layer);
   text_layer_destroy(s_batt_percent_layer);
   layer_destroy(s_battery_layer);
+  layer_destroy(s_divider_layer);
   fonts_unload_custom_font(s_font_medium);
   fonts_unload_custom_font(s_font_small);
   fonts_unload_custom_font(s_font_time);
@@ -530,7 +556,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     snprintf(conditions_buffer, sizeof(conditions_buffer), "%s", conditions_tuple->value->cstring);
     snprintf(condition_layer_buffer, sizeof(condition_layer_buffer), "%s", conditions_buffer);
 
-    if (strncmp(settings.PercentChoice, "precip", 4) == 0)
+    if (strncmp(settings.PercentChoice, "precip", 6) == 0)
     {
       snprintf(humid_buffer, sizeof(humid_buffer), "%d%%", (int)precip_tuple->value->int32);
     } else if (strncmp(settings.PercentChoice, "humid", 5) == 0){
@@ -602,6 +628,10 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   Tuple *show_rise_set_t = dict_find(iterator, MESSAGE_KEY_ShowRiseSet);
   if (show_rise_set_t){
     settings.ShowRiseSet = show_rise_set_t->value->int32 == 1;
+  }
+  Tuple *show_divider_t = dict_find(iterator, MESSAGE_KEY_ShowDivider);
+  if (show_divider_t){
+    settings.ShowDivider = show_divider_t->value->int32 == 1;
   }
   Tuple *seconds_choice_t = dict_find(iterator, MESSAGE_KEY_SecondsChoice);
   if (seconds_choice_t) {

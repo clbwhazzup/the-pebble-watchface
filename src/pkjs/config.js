@@ -142,6 +142,12 @@ module.exports = [
         "messageKey": "ShowRiseSet",
         "label": "Show Sunrise and Sunset",
         "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ShowDivider",
+        "label": "Show Divider",
+        "defaultValue": true
       }
     ]
   },

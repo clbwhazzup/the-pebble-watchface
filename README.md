@@ -13,6 +13,7 @@
   * Location, reverse geocoding through bigdatacloud.net
   * Day of week, month, day
   * Battery level bar with percentage
+  * Divider between certain elements
   * DSEG Segmented Digital Display Font Family
     * DSEG14 Classic Mini Bold
     * DSEG Weather
@@ -26,6 +27,4 @@
     * Sometimes takes a while to load data
 * TODO
   * Looks fine for everything but uneven dead space on Time 2
-  * Add seperators between sections
-    * Could be similar to battery drawing
   * Should probably save info data in clay settings
