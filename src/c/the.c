@@ -64,6 +64,8 @@ int city_y;
 int health_y;
 int divider_1_y;
 int divider_2_y;
+int left_x;
+int right_x;
 bool show_seconds_now;
 bool health_available;
 int battery_level;
@@ -164,17 +166,19 @@ static void set_positions(void) {
   int time_height = 42;
   int medium_height = 20;
   int small_height = 12;
-  time_y = (bounds.size.h / 2) - 15;
   hl_y = 24;
   weather_y = 10;
   condition_y = -5;
   rise_set_y = bounds.size.h - small_height - 2;
   date_y = time_y - medium_height - 5;
-  city_y = time_y + time_height + 8;
-  health_y = rise_set_y - small_height - 5;
+  city_y = time_y + time_height + 5;
+  health_y = city_y + small_height + 4;
   humid_y = condition_y + small_height / 2 + 5;
-  divider_1_y = (date_y + hl_y + small_height) / 2;
-  divider_2_y = (city_y + health_y + small_height) / 2;
+  divider_1_y = hl_y + small_height + 3;
+  divider_2_y = rise_set_y - 4;
+  left_x = layer_get_frame(text_layer_get_layer(s_time_layer)).origin.x;
+  right_x = layer_get_frame(text_layer_get_layer(s_time_layer)).origin.x + 
+    layer_get_frame(text_layer_get_layer(s_time_layer)).size.w - 48;
 }
 
 
@@ -197,7 +201,7 @@ static void create_divider_layer(void) {
 // City layer
 static void create_city_layer(void) {
   s_city_layer = text_layer_create(
-      GRect(0, city_y, bounds.size.w, 30));
+      GRect(left_x, city_y, bounds.size.w, 30));
   text_layer_set_font(s_city_layer, s_font_small);
   text_layer_set_text_color(s_city_layer, settings.TextColor);
   text_layer_set_background_color(s_city_layer, GColorClear);
@@ -274,7 +278,7 @@ static void health_handler(HealthEventType event, void *context) {
 }
 static void create_steps_layer(void) {
   s_steps_layer = text_layer_create(
-      GRect(0, health_y, bounds.size.w, 30));
+      GRect(left_x, health_y, bounds.size.w, 30));
   text_layer_set_font(s_steps_layer, s_font_small);
   text_layer_set_text_color(s_steps_layer, settings.TextColor);
   text_layer_set_background_color(s_steps_layer, GColorClear);
@@ -284,7 +288,7 @@ static void create_steps_layer(void) {
 }
 static void create_hr_layer(void) {
   s_hr_layer = text_layer_create(
-      GRect(0, health_y, bounds.size.w, 30));
+      GRect(right_x, health_y, 48, 30));
   text_layer_set_font(s_hr_layer, s_font_small);
   text_layer_set_text_color(s_hr_layer, settings.TextColor);
   text_layer_set_background_color(s_hr_layer, GColorClear);
@@ -354,7 +358,7 @@ static void create_batt_percent_layer(void) {
 // Time handling
 static void create_date_layer(void) {
   s_date_layer = text_layer_create(
-      GRect(0, date_y, bounds.size.w, 30));
+      GRect((bounds.size.w/2)-72, date_y, 144, 30));
   text_layer_set_font(s_date_layer, s_font_medium);
   text_layer_set_text_color(s_date_layer, settings.TextColor);
   text_layer_set_background_color(s_date_layer, GColorClear);
@@ -363,8 +367,9 @@ static void create_date_layer(void) {
   layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_date_layer));
 }
 static void create_time_layer(void) {
+  time_y = (bounds.size.h / 2) - 14;
   s_time_layer = text_layer_create(
-      GRect(0, time_y, bounds.size.w, 50));
+      GRect((bounds.size.w/2)-72, time_y, 144, 50));
   text_layer_set_font(s_time_layer, s_font_time);
   text_layer_set_text_color(s_time_layer, settings.TextColor);
   text_layer_set_background_color(s_time_layer, GColorClear);
@@ -374,7 +379,7 @@ static void create_time_layer(void) {
 }
 static void create_seconds_layer(void) {
   s_seconds_layer = text_layer_create(
-      GRect(0, city_y, bounds.size.w, 30));
+      GRect(right_x, city_y, 48, 30));
   text_layer_set_font(s_seconds_layer, s_font_small);
   text_layer_set_text_color(s_seconds_layer, settings.TextColor);
   text_layer_set_background_color(s_seconds_layer, GColorClear);
@@ -459,8 +464,8 @@ static void main_window_load(Window* window) {
 
   window_layer = window_get_root_layer(window);
   bounds = layer_get_bounds(window_layer);
-  set_positions();
   create_time_layer();
+  set_positions();
   create_seconds_layer();
   create_date_layer();
   create_hl_layer();
