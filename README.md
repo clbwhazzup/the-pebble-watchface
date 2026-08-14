@@ -30,3 +30,6 @@
   * Looks fine for everything but uneven dead space on Time 2
     * 1.2 might be resizing elements for Time 2 to make it exactly like smaller screens
   * Should probably save info data in clay settings
+  * Sleep mode
+  * battery updates twice per minute, unsure of where in stack this happens, or if screen even updates
+    * log message in update_proc reveals this

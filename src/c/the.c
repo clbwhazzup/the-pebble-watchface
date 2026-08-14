@@ -429,6 +429,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     app_message_outbox_begin(&iter);
     dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
     app_message_outbox_send();
+    update_time();
   } else if (tick_time->tm_sec == 0) {
     update_time();
   }
