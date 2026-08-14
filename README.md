@@ -3,7 +3,7 @@
 #### Very Informative Watchface
 
 #### My perfect collection of watchface features
-##### Version 1.1
+##### Version 1.2
 ###### Only compatible with rectangular watches
 * Features
   * Toggle / options for every display element (except time)
