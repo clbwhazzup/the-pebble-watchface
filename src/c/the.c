@@ -1,6 +1,32 @@
 #include <pebble.h>
 #define SETTINGS_KEY 1
 
+// Time 2 (emery) has a 200x228 screen, 4/3 the size of the 144x168 screen every
+// other platform uses. The time and the elements clustered around it (date,
+// city, seconds, steps, heart rate) scale with it; the weather block, dividers,
+// sunrise/sunset and battery keep their original sizes on every platform.
+#if defined(PBL_PLATFORM_EMERY)
+  #define TIME_FONT_H    56
+  #define DATE_FONT_H    27
+  #define INFO_FONT_H    16
+  #define TIME_LAYER_H   66
+  #define DATE_LAYER_H   40
+  #define TIME_Y_OFFSET  19
+  #define CENTER_GAP     7
+  #define HEALTH_GAP     5
+  #define INFO_W         64
+#else
+  #define TIME_FONT_H    42
+  #define DATE_FONT_H    20
+  #define INFO_FONT_H    12
+  #define TIME_LAYER_H   50
+  #define DATE_LAYER_H   30
+  #define TIME_Y_OFFSET  14
+  #define CENTER_GAP     5
+  #define HEALTH_GAP     4
+  #define INFO_W         48
+#endif
+
 // App Settings for watchface
 typedef struct ClaySettings {
   GColor BackgroundColor;
@@ -45,6 +71,8 @@ static GFont s_font_time;
 static GFont s_font_medium;
 static GFont s_font_small;
 static GFont s_font_weather;
+static GFont s_font_date; // medium, scaled with the time
+static GFont s_font_info; // small, scaled with the time (city, seconds, health)
 
 static GRect bounds;
 static AppTimer *s_seconds_timer;
@@ -163,22 +191,23 @@ static void prv_update_display() {
 
 // Positioning
 static void set_positions(void) {
-  int time_height = 42;
-  int medium_height = 20;
+  int time_height = TIME_FONT_H;
+  int date_height = DATE_FONT_H;
+  int info_height = INFO_FONT_H;
   int small_height = 12;
   hl_y = 24;
   weather_y = 10;
   condition_y = -5;
   rise_set_y = bounds.size.h - small_height - 2;
-  date_y = time_y - medium_height - 5;
-  city_y = time_y + time_height + 5;
-  health_y = city_y + small_height + 4;
+  date_y = time_y - date_height - CENTER_GAP;
+  city_y = time_y + time_height + CENTER_GAP;
+  health_y = city_y + info_height + HEALTH_GAP;
   humid_y = condition_y + small_height / 2 + 5;
   divider_1_y = hl_y + small_height + 3;
   divider_2_y = rise_set_y - 4;
   left_x = layer_get_frame(text_layer_get_layer(s_time_layer)).origin.x;
-  right_x = layer_get_frame(text_layer_get_layer(s_time_layer)).origin.x + 
-    layer_get_frame(text_layer_get_layer(s_time_layer)).size.w - 48;
+  right_x = layer_get_frame(text_layer_get_layer(s_time_layer)).origin.x +
+    layer_get_frame(text_layer_get_layer(s_time_layer)).size.w - INFO_W;
 }
 
 
@@ -202,7 +231,7 @@ static void create_divider_layer(void) {
 static void create_city_layer(void) {
   s_city_layer = text_layer_create(
       GRect(left_x, city_y, bounds.size.w, 30));
-  text_layer_set_font(s_city_layer, s_font_small);
+  text_layer_set_font(s_city_layer, s_font_info);
   text_layer_set_text_color(s_city_layer, settings.TextColor);
   text_layer_set_background_color(s_city_layer, GColorClear);
   text_layer_set_text_alignment(s_city_layer, GTextAlignmentLeft);
@@ -279,7 +308,7 @@ static void health_handler(HealthEventType event, void *context) {
 static void create_steps_layer(void) {
   s_steps_layer = text_layer_create(
       GRect(left_x, health_y, bounds.size.w, 30));
-  text_layer_set_font(s_steps_layer, s_font_small);
+  text_layer_set_font(s_steps_layer, s_font_info);
   text_layer_set_text_color(s_steps_layer, settings.TextColor);
   text_layer_set_background_color(s_steps_layer, GColorClear);
   text_layer_set_text_alignment(s_steps_layer, GTextAlignmentLeft);
@@ -288,8 +317,8 @@ static void create_steps_layer(void) {
 }
 static void create_hr_layer(void) {
   s_hr_layer = text_layer_create(
-      GRect(right_x, health_y, 48, 30));
-  text_layer_set_font(s_hr_layer, s_font_small);
+      GRect(right_x, health_y, INFO_W, 30));
+  text_layer_set_font(s_hr_layer, s_font_info);
   text_layer_set_text_color(s_hr_layer, settings.TextColor);
   text_layer_set_background_color(s_hr_layer, GColorClear);
   text_layer_set_text_alignment(s_hr_layer, GTextAlignmentRight);
@@ -358,8 +387,8 @@ static void create_batt_percent_layer(void) {
 // Time handling
 static void create_date_layer(void) {
   s_date_layer = text_layer_create(
-      GRect((bounds.size.w/2)-72, date_y, 144, 30));
-  text_layer_set_font(s_date_layer, s_font_medium);
+      GRect(0, date_y, bounds.size.w, DATE_LAYER_H));
+  text_layer_set_font(s_date_layer, s_font_date);
   text_layer_set_text_color(s_date_layer, settings.TextColor);
   text_layer_set_background_color(s_date_layer, GColorClear);
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
@@ -367,9 +396,9 @@ static void create_date_layer(void) {
   layer_add_child(window_get_root_layer(s_window), text_layer_get_layer(s_date_layer));
 }
 static void create_time_layer(void) {
-  time_y = (bounds.size.h / 2) - 14;
+  time_y = (bounds.size.h / 2) - TIME_Y_OFFSET;
   s_time_layer = text_layer_create(
-      GRect((bounds.size.w/2)-72, time_y, 144, 50));
+      GRect(0, time_y, bounds.size.w, TIME_LAYER_H));
   text_layer_set_font(s_time_layer, s_font_time);
   text_layer_set_text_color(s_time_layer, settings.TextColor);
   text_layer_set_background_color(s_time_layer, GColorClear);
@@ -379,8 +408,8 @@ static void create_time_layer(void) {
 }
 static void create_seconds_layer(void) {
   s_seconds_layer = text_layer_create(
-      GRect(right_x, city_y, 48, 30));
-  text_layer_set_font(s_seconds_layer, s_font_small);
+      GRect(right_x, city_y, INFO_W, 30));
+  text_layer_set_font(s_seconds_layer, s_font_info);
   text_layer_set_text_color(s_seconds_layer, settings.TextColor);
   text_layer_set_background_color(s_seconds_layer, GColorClear);
   text_layer_set_text_alignment(s_seconds_layer, GTextAlignmentRight);
@@ -460,8 +489,16 @@ static void main_window_load(Window* window) {
   // load custom fonts once and keep handles globally
   s_font_medium = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DSEGFT_20));
   s_font_small = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DSEGFT_12));
-  s_font_time = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DSEG_42));
   s_font_weather = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DSEG_WEATHER_24));
+#if defined(PBL_PLATFORM_EMERY)
+  s_font_time = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DSEG_56));
+  s_font_date = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DSEGFT_27));
+  s_font_info = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DSEGFT_16));
+#else
+  s_font_time = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DSEG_42));
+  s_font_date = s_font_medium;
+  s_font_info = s_font_small;
+#endif
 
   window_layer = window_get_root_layer(window);
   bounds = layer_get_bounds(window_layer);
@@ -504,6 +541,10 @@ static void main_window_unload(Window* window) {
   fonts_unload_custom_font(s_font_small);
   fonts_unload_custom_font(s_font_time);
   fonts_unload_custom_font(s_font_weather);
+#if defined(PBL_PLATFORM_EMERY)
+  fonts_unload_custom_font(s_font_date);
+  fonts_unload_custom_font(s_font_info);
+#endif
 }
 static void create_main_window(void) {
   s_window = window_create();

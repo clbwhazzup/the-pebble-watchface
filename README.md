@@ -3,7 +3,7 @@
 #### Very Informative Watchface
 
 #### My perfect collection of watchface features
-##### Version 1.2
+##### Version 1.3
 ###### Only compatible with rectangular watches
 * Features
   * Toggle / options for every display element (except time)
@@ -27,8 +27,6 @@
     * Sometimes takes a while to load data
       * very rarely gets completely stuck
 * TODO
-  * Looks fine for everything but uneven dead space on Time 2
-    * 1.2 might be resizing elements for Time 2 to make it exactly like smaller screens
   * Should probably save info data in clay settings
   * Sleep mode
   * battery updates twice per minute, unsure of where in stack this happens, or if screen even updates
